@@ -46,6 +46,7 @@ const ADMIN_SECTIONS: Section[] = [
   {
     title: 'Platform',
     items: [
+      { href: '/admin/signups', label: 'Signup queue', icon: 'leads' },
       { href: '/admin/companies', label: 'Companies', icon: 'building' },
       { href: '/admin/billing', label: 'Billing', icon: 'receipt' },
       { href: '/admin/users', label: 'Users', icon: 'users' }
@@ -74,7 +75,7 @@ export function Sidebar({ variant, roster, isPlatformAdmin }: {
           <span className="relative text-bg font-bold text-sm">A</span>
         </div>
         <div className="leading-tight">
-          <div className="text-sm font-semibold tracking-tight">AgentOS</div>
+          <div className="text-sm font-semibold tracking-tight">Shadow</div>
           <div className="text-[9px] text-cyan-300/70 uppercase tracking-[0.18em]">
             {variant === 'admin' ? 'Platform Admin' : 'Agentic Growth Operations'}
           </div>

@@ -25,7 +25,7 @@ export default async function AdminOverview() {
             <p className="text-[10px] uppercase tracking-[0.32em] text-amber-300/80 mb-1">Platform Admin · Operator Console</p>
             <h1 className="text-3xl font-semibold tracking-tight"
                 style={{ textShadow: '0 0 24px rgba(251,146,60,0.18)' }}>
-              AgentOS Operator Console
+              Shadow Operator Console
             </h1>
             <p className="text-sm text-muted mt-1">Everything happening across every customer you sell to.</p>
           </div>

@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'AgentOS',
+  title: 'Shadow · Agentic Growth OS',
   description: 'AI agents that run your business overnight.'
 }
 

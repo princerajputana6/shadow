@@ -24,7 +24,7 @@ const ICON_COLOR: Record<string, string> = {
 export function IntegrationCard({ integration: i }: { integration: Integration }) {
   function connect() {
     if (i.notConfigured) {
-      alert(`${i.name} OAuth is not configured in the AgentOS environment. Ask your admin to set the OAuth client id/secret.`)
+      alert(`${i.name} OAuth is not configured in the Shadow environment. Ask your admin to set the OAuth client id/secret.`)
       return
     }
     window.location.href = i.connectAction

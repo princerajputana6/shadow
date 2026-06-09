@@ -74,10 +74,10 @@ export async function getAdminSnapshot(): Promise<AdminSnapshot> {
   const since24h = new Date(now.getTime() - day)
   const since7d = new Date(now.getTime() - 7 * day)
 
-  // Exclude internal "AgentOS HQ" org from customer-facing analytics — it's
+  // Exclude internal "Shadow HQ" org from customer-facing analytics — it's
   // the admin's own dogfooding org, not a customer.
   const [orgs, allSubs, allUsers, allMemberships] = await Promise.all([
-    Organization.find({ slug: { $ne: 'agentos-hq' } }).sort({ createdAt: -1 }).lean(),
+    Organization.find({ slug: { $nin: ['shadow-hq', 'agentos-hq'] } }).sort({ createdAt: -1 }).lean(),
     AgentSubscription.find({}).lean(),
     User.countDocuments({}),
     Membership.find({}).lean()

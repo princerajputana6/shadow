@@ -46,7 +46,12 @@ export default {
       const id = auth?.user?.id
       const isAuthed = typeof id === 'string' && /^[a-f0-9]{24}$/i.test(id)
       const path = request.nextUrl.pathname
-      const isPublic = path === '/login' || path.startsWith('/api/auth')
+      // Routes anyone can hit, signed in or not. The marketing site (/) and
+      // its API endpoint (/api/signup) live here.
+      const isPublic = path === '/' ||
+                       path === '/login' ||
+                       path.startsWith('/api/auth') ||
+                       path === '/api/signup'
 
       if (!isAuthed && !isPublic) {
         // If there's a stale auth cookie, route through /api/auth/clear so the

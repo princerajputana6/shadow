@@ -24,7 +24,7 @@ export default function LoginPage() {
     <main className="min-h-screen flex items-center justify-center p-6">
       <div className="w-full max-w-sm space-y-6 rounded-2xl border border-border bg-surface p-8">
         <header>
-          <h1 className="text-2xl font-semibold">AgentOS</h1>
+          <h1 className="text-2xl font-semibold">Shadow</h1>
           <p className="text-sm text-muted">Sign in to your control room.</p>
         </header>
 

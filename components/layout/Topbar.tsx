@@ -67,7 +67,7 @@ export function Topbar({ userName, userEmail, orgName, isPlatformAdmin, variant 
                   <Link href="/admin" className="block px-3 py-1.5 text-sm rounded-md hover:bg-bg/50">Platform admin</Link>
                 )}
                 {isPlatformAdmin && variant === 'admin' && (
-                  <Link href="/dashboard" className="block px-3 py-1.5 text-sm rounded-md hover:bg-bg/50">My agents (AgentOS HQ)</Link>
+                  <Link href="/dashboard" className="block px-3 py-1.5 text-sm rounded-md hover:bg-bg/50">My agents (Shadow HQ)</Link>
                 )}
                 <button onClick={() => signOut({ callbackUrl: '/login' })}
                         className="w-full text-left px-3 py-1.5 text-sm rounded-md hover:bg-bg/50 text-red-300">
