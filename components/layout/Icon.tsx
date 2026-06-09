@@ -1,0 +1,28 @@
+// Tiny inline SVG icon set — Heroicons-style, 1.5 stroke. Zero deps.
+
+const ICONS: Record<string, string> = {
+  dashboard: 'M3 12l9-9 9 9M5 10v10a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V10',
+  briefcase: 'M3 7h18v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7zm5 0V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2',
+  leads: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
+  calendar: 'M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM16 2v4M8 2v4M3 10h18',
+  search: 'M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm10 2l-4.35-4.35',
+  speech: 'M21 12a9 9 0 1 1-3.94-7.43M21 4l-9 9-3-3',
+  share: 'M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13',
+  settings: 'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
+  building: 'M3 21h18M5 21V7l8-4v18M19 21V11l-6-4',
+  admin: 'M12 1l9 4v6c0 5.55-3.84 10.74-9 12-5.16-1.26-9-6.45-9-12V5l9-4z',
+  users: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
+  code: 'M16 18l6-6-6-6M8 6l-6 6 6 6',
+  bot: 'M12 8V4H8M16 4h-4M20 8h-2M20 16h-2M4 8h2M4 16h2M16 20h-4M12 16v4M6 8v8a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4V8a4 4 0 0 0-4-4h-4a4 4 0 0 0-4 4z M9 13v.01M15 13v.01',
+  logout: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
+  receipt: 'M14 2H6a2 2 0 0 0-2 2v16l4-2 4 2 4-2 4 2V8z M14 2v6h6M16 13H8M16 17H8M10 9H8'
+}
+
+export function Icon({ name, className = 'h-4 w-4' }: { name: keyof typeof ICONS; className?: string }) {
+  const path = ICONS[name] || ICONS.dashboard
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d={path} />
+    </svg>
+  )
+}

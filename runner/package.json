@@ -1,0 +1,21 @@
+{
+  "name": "agentos-runner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.32.1",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "16.4.7",
+    "express": "4.21.2",
+    "googleapis": "144.0.0",
+    "mongoose": "8.8.4",
+    "node-cron": "3.0.3",
+    "nodemailer": "6.9.16"
+  }
+}

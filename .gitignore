@@ -1,0 +1,27 @@
+# deps
+node_modules
+runner/node_modules
+
+# next
+.next
+out
+next-env.d.ts.bak
+
+# env
+.env
+.env.local
+.env*.local
+runner/.env
+
+# logs
+*.log
+npm-debug.log*
+
+# editor / os
+.vscode
+.idea
+.DS_Store
+
+# misc
+*.tsbuildinfo
+.cache
