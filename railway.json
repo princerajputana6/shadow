@@ -1,14 +1,4 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
-  "build": {
-    "builder": "NIXPACKS",
-    "buildCommand": "cd runner && npm ci"
-  },
-  "deploy": {
-    "startCommand": "cd runner && npm start",
-    "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 5,
-    "healthcheckPath": "/health",
-    "healthcheckTimeout": 30
-  }
+  "_comment": "This file is intentionally minimal. The runner service on Railway should set Root Directory = `runner`, which makes runner/railway.json the active config. Next.js deploys to Vercel separately and doesn't need a railway.json."
 }
