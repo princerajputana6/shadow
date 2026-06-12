@@ -80,7 +80,7 @@ export async function createMeeting({
   googleTokens, title, description, attendeeEmail, attendeeName, startTime, endTime
 }) {
   const cal = calendarService(googleTokens)
-  const requestId = `agentos-${attendeeEmail}-${Date.now()}`
+  const requestId = `shadow-${attendeeEmail}-${Date.now()}`
   const { data } = await cal.events.insert({
     calendarId: 'primary',
     conferenceDataVersion: 1,

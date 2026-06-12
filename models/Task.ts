@@ -2,7 +2,7 @@ import mongoose, { Schema, Model, Document, Types } from 'mongoose'
 
 export type TaskStatus = 'backlog' | 'triaging' | 'in_progress' | 'pr_open' | 'blocked' | 'done' | 'cancelled'
 export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent'
-export type TaskAssignedAgent = 'cto' | 'developer' | 'human'
+export type TaskAssignedAgent = 'ceo' | 'researcher' | 'cmo' | 'sales_rep' | 'dev' | 'data_analyst' | 'cto' | 'developer' | 'human'
 
 export interface TaskDoc extends Document {
   organizationId: Types.ObjectId
@@ -34,7 +34,7 @@ const TaskSchema = new Schema<TaskDoc>({
   branch: String,
   status: { type: String, default: 'backlog', enum: ['backlog', 'triaging', 'in_progress', 'pr_open', 'blocked', 'done', 'cancelled'] },
   priority: { type: String, default: 'normal', enum: ['low', 'normal', 'high', 'urgent'] },
-  assignedAgent: { type: String, default: 'human', enum: ['cto', 'developer', 'human'] },
+  assignedAgent: { type: String, default: 'ceo', enum: ['ceo', 'researcher', 'cmo', 'sales_rep', 'dev', 'data_analyst', 'cto', 'developer', 'human'] },
   parentTaskId: { type: Schema.Types.ObjectId, ref: 'Task' },
   sourceLink: String,
   prUrl: String,

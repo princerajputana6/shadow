@@ -20,6 +20,95 @@ export type AgentRole = {
   icon: string               // emoji/glyph for chip
 }
 
+export type AgentDetail = {
+  responsibilities: string[]
+  outputs: string[]
+  inputs: string[]
+  collaboratesWith: AgentRoleKey[]
+  voiceName: string  // hint for SpeechSynthesis voice selection
+}
+
+export const AGENT_DETAILS: Record<AgentRoleKey, AgentDetail> = {
+  ceo: {
+    responsibilities: [
+      'Listens to the operator (voice or text) and routes work to the right specialist',
+      'Reads every agent\'s run output and composes the daily debrief',
+      'Triages new tasks — converts a vague ask into a structured plan',
+      'Owns the morning briefing — single paragraph delivered at 6 AM IST',
+      'Handles ambiguous requests by clarifying instead of guessing'
+    ],
+    outputs: ['Morning briefing', 'Task assignments', 'Routing decisions', 'Voice responses'],
+    inputs: ['Operator commands (voice + text)', 'Other agents\' run results', 'Recent activity feed'],
+    collaboratesWith: ['researcher', 'sales_rep', 'cmo', 'dev', 'data_analyst'],
+    voiceName: 'Google US English'
+  },
+  researcher: {
+    responsibilities: [
+      'Runs intent-signal queries every 6 hours via Tavily',
+      'Filters out competitors and listicles; keeps real buyer signals',
+      'Enriches candidates with Hunter.io to find decision-maker emails',
+      'Stages prospects into the review queue — never auto-contacts',
+      'Hands qualified candidates to Sales Rep after operator approval'
+    ],
+    outputs: ['Candidate companies', 'Buyer-intent signals', 'Email enrichment'],
+    inputs: ['Business profile from /businesses', 'Tavily search results', 'Hunter.io domain lookups'],
+    collaboratesWith: ['sales_rep', 'ceo'],
+    voiceName: 'Daniel'
+  },
+  cmo: {
+    responsibilities: [
+      'Drafts 5 posts per business per cycle — Twitter, LinkedIn, Instagram',
+      'Calibrates tone to match your brand voice (educational, opinion, founder story)',
+      'Respects platform character limits and visual norms',
+      'Generates image prompts for Instagram posts',
+      'Never auto-publishes — every post goes to your review queue'
+    ],
+    outputs: ['Post drafts', 'Image prompts', 'Suggested hashtags'],
+    inputs: ['Business positioning', 'Recent customer wins', 'Industry conversations'],
+    collaboratesWith: ['data_analyst', 'ceo'],
+    voiceName: 'Samantha'
+  },
+  sales_rep: {
+    responsibilities: [
+      'Sends outreach to opted-in prospects via Gmail OAuth (no SMTP gymnastics)',
+      'Reads replies, qualifies intent with Claude, de-duplicates threads',
+      'Books meetings on Google Calendar with auto Meet links',
+      'Updates the Lead pipeline with urgency scores',
+      'After conversion, hands the engagement to Dev via CEO'
+    ],
+    outputs: ['Sent emails', 'Booked meetings', 'Qualified leads', 'Urgency scores'],
+    inputs: ['Approved prospects', 'Inbox replies', 'Calendar availability'],
+    collaboratesWith: ['researcher', 'data_analyst', 'dev', 'ceo'],
+    voiceName: 'Google UK English Male'
+  },
+  dev: {
+    responsibilities: [
+      'Reads the GitHub repo tree (Octokit), walks files relevant to a task',
+      'Generates code changes scoped to the smallest necessary diff',
+      'Opens a DRAFT PR on a feature branch — never auto-merges',
+      'Includes a summary, files-changed list, and reviewer checklist on every PR',
+      'Picks up converted projects from Sales Rep via CEO routing'
+    ],
+    outputs: ['Draft pull requests', 'Code diffs', 'Implementation notes'],
+    inputs: ['CTO plan', 'Repo tree', 'Task description', 'Source links (Jira / GitHub issues)'],
+    collaboratesWith: ['data_analyst', 'ceo'],
+    voiceName: 'Alex'
+  },
+  data_analyst: {
+    responsibilities: [
+      'Tracks per-agent run counts, failure rates, token consumption',
+      'Surfaces anomalies — e.g. failure rate spike on the Dev agent',
+      'Maintains the per-customer signal panel in the admin view',
+      'Computes MRR / ARR / conversion ratios for the operator',
+      'Assists Sales Rep with conversion analytics on request'
+    ],
+    outputs: ['Daily telemetry', 'Anomaly alerts', 'Per-customer reports', 'Conversion metrics'],
+    inputs: ['Every AgentRun document', 'Lead pipeline', 'Subscription data'],
+    collaboratesWith: ['sales_rep', 'cmo', 'dev', 'ceo'],
+    voiceName: 'Google US English'
+  }
+}
+
 export const AGENT_ROSTER: AgentRole[] = [
   {
     key: 'ceo',

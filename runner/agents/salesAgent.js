@@ -261,7 +261,7 @@ async function tryBookMeeting({ user, lead, googleTokens }) {
   const meeting = await createMeeting({
     googleTokens,
     title: `Discovery call — ${lead.name || lead.email}${lead.company ? ` (${lead.company})` : ''}`,
-    description: `Requirement: ${lead.requirementDetail || lead.requirement || 'Software development'}\n\nSent by AgentOS Sales agent on behalf of ${user.name || user.email}.`,
+    description: `Requirement: ${lead.requirementDetail || lead.requirement || 'Software development'}\n\nSent by Shadow's Sales Rep on behalf of ${user.name || user.email}.`,
     attendeeEmail: lead.email,
     attendeeName: lead.name || lead.email,
     startTime: slot.start,

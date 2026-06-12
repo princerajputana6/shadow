@@ -46,12 +46,15 @@ export async function syncRepos() {
   return { synced: repos.length }
 }
 
+type AssignedAgent = 'ceo' | 'researcher' | 'cmo' | 'sales_rep' | 'dev' | 'data_analyst' | 'cto' | 'developer' | 'human'
+
 export async function createTask(input: {
   title: string
   description?: string
   repoId?: string
   priority?: 'low' | 'normal' | 'high' | 'urgent'
   sourceLink?: string
+  assignedAgent?: AssignedAgent
 }) {
   const userId = await authedUserId()
   await connectDB()
@@ -76,7 +79,7 @@ export async function createTask(input: {
     branch,
     priority: input.priority || 'normal',
     status: 'backlog',
-    assignedAgent: 'cto',
+    assignedAgent: input.assignedAgent || 'ceo',  // default to CEO; CEO routes from there
     sourceLink: input.sourceLink
   })
   revalidatePath('/tasks')

@@ -313,18 +313,40 @@ export function ShadowFloater({ userName }: { userName?: string }) {
     }
   }
 
+  function pickBestVoice(lang: string): SpeechSynthesisVoice | null {
+    const voices = window.speechSynthesis.getVoices()
+    if (!voices.length) return null
+    // Priority list — these are the most natural-sounding voices on
+    // Chrome/macOS/iOS. Falls back to any voice matching the lang.
+    const preferred = [
+      'Google UK English Female', 'Google US English', 'Google हिन्दी',
+      'Samantha', 'Karen', 'Daniel', 'Alex', 'Tessa', 'Moira',
+      'Microsoft Aria Online (Natural)', 'Microsoft Jenny Online (Natural)'
+    ]
+    for (const name of preferred) {
+      const v = voices.find(x => x.name === name)
+      if (v) return v
+    }
+    // Try local enhanced voices that match the language
+    const enhanced = voices.find(v => v.lang === lang && (v.name.includes('Enhanced') || v.name.includes('Premium')))
+    if (enhanced) return enhanced
+    const exact = voices.find(v => v.lang === lang)
+    if (exact) return exact
+    return voices.find(v => v.lang.startsWith(lang.split('-')[0])) || voices[0]
+  }
+
   function speakAndResume(text: string) {
     if (typeof window === 'undefined') return
     window.speechSynthesis.cancel()
     const u = new SpeechSynthesisUtterance(text)
-    u.rate = 1.0
+    // Tuned for natural pacing — not robotic, not rushed.
+    u.rate = 1.05
+    u.pitch = 1.0
+    u.volume = 1.0
     u.lang = langRef.current || 'en-IN'
-    // Try to pick a voice matching the chosen language
-    const voices = window.speechSynthesis.getVoices()
-    const matchExact = voices.find(v => v.lang === u.lang)
-    const matchPrefix = voices.find(v => v.lang.startsWith(u.lang.split('-')[0]))
-    if (matchExact) u.voice = matchExact
-    else if (matchPrefix) u.voice = matchPrefix
+
+    const voice = pickBestVoice(u.lang)
+    if (voice) u.voice = voice
 
     speakingRef.current = true
     u.onstart = () => setStatus('speaking')
@@ -332,7 +354,6 @@ export function ShadowFloater({ userName }: { userName?: string }) {
       speakingRef.current = false
       if (conversingRef.current) {
         setStatus('listening')
-        // Long cooldown so the mic buffer clears before we listen again — kills echo loops
         scheduleNextTurn(POST_TTS_COOLDOWN_MS)
       } else {
         setStatus('off')
@@ -427,9 +448,50 @@ export function ShadowFloater({ userName }: { userName?: string }) {
         )}
       </AnimatePresence>
 
-      {/* Expanded panel — history view */}
+      {/* Speaking overlay — replaces text panel during speech so it feels like the agent is talking */}
       <AnimatePresence>
-        {open && (
+        {status === 'speaking' && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed inset-0 z-30 flex items-center justify-center pointer-events-none"
+          >
+            <div className="absolute inset-0 bg-bg/70 backdrop-blur-md" />
+            <div className="relative pointer-events-auto">
+              {/* CEO speaking orb — violet, large, multi-layered pulse */}
+              <div className="relative h-48 w-48 flex items-center justify-center">
+                {/* Outer rotating rings */}
+                <svg className="absolute inset-0 animate-[spin_20s_linear_infinite]" viewBox="0 0 200 200" fill="none">
+                  <circle cx="100" cy="100" r="92" stroke="rgba(167,139,250,0.25)" strokeWidth="1" strokeDasharray="4 8" />
+                </svg>
+                <svg className="absolute inset-0 animate-[spin_30s_linear_infinite_reverse]" viewBox="0 0 200 200" fill="none">
+                  <circle cx="100" cy="100" r="78" stroke="rgba(56,189,248,0.2)" strokeWidth="1" strokeDasharray="2 10" />
+                </svg>
+                {/* Multiple pulsing layers */}
+                <span className="absolute h-44 w-44 rounded-full bg-violet-500/10 animate-pulse" />
+                <span className="absolute h-36 w-36 rounded-full bg-violet-500/15 animate-pulse" style={{ animationDelay: '0.2s' }} />
+                <span className="absolute h-28 w-28 rounded-full bg-violet-500/25 animate-pulse" style={{ animationDelay: '0.4s' }} />
+                {/* Core orb */}
+                <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-violet-300 via-violet-500 to-fuchsia-700 shadow-2xl shadow-violet-500/50 flex items-center justify-center">
+                  <span className="text-3xl text-white/95 font-light">◆</span>
+                </div>
+              </div>
+              {/* Agent label + interrupt */}
+              <div className="mt-6 text-center space-y-1">
+                <p className="text-[10px] uppercase tracking-[0.32em] text-violet-300/80">CEO · Speaking</p>
+                <button
+                  onClick={() => { try { window.speechSynthesis.cancel() } catch {} ; speakingRef.current = false; setStatus('listening'); scheduleNextTurn(100) }}
+                  className="mt-3 text-[11px] uppercase tracking-wider text-muted hover:text-text">
+                  tap orb to interrupt
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Expanded panel — history view (hidden during speech for a cleaner agent feel) */}
+      <AnimatePresence>
+        {open && status !== 'speaking' && (
           <motion.div initial={{ opacity: 0, y: 12, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0 }}
                       className="absolute bottom-20 right-0 w-[380px] max-h-[520px] rounded-2xl border border-cyan-500/20 bg-surface/95 backdrop-blur-xl shadow-2xl flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-cyan-500/10">

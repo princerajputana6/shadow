@@ -1,4 +1,4 @@
-// Seeds an internal "AgentOS HQ" org owned by the platform admin so they can
+// Seeds an internal "Shadow HQ" org owned by the platform admin so they can
 // use all the customer-facing agents themselves. All agents enabled at ₹0
 // (admin doesn't bill themselves) so they don't pollute MRR numbers in /admin.
 //
@@ -25,13 +25,13 @@ if (!admin) {
   process.exit(1)
 }
 
-const slug = 'agentos-hq'
+const slug = 'shadow-hq'
 let org = await Organization.findOne({ slug })
 if (org) {
   console.log(`HQ org already exists (id ${org._id}). Refreshing memberships and subscriptions.`)
 } else {
   org = await Organization.create({
-    name: 'AgentOS HQ',
+    name: 'Shadow HQ',
     slug,
     ownerUserId: admin._id,
     contactEmail: admin.email,
@@ -45,7 +45,7 @@ if (org) {
 const existingMembership = await Membership.findOne({ organizationId: org._id, userId: admin._id })
 if (!existingMembership) {
   await Membership.create({ organizationId: org._id, userId: admin._id, role: 'owner' })
-  console.log('Admin is now owner of AgentOS HQ.')
+  console.log('Admin is now owner of Shadow HQ.')
 }
 
 for (const a of AGENT_CATALOG) {
@@ -69,5 +69,5 @@ for (const a of AGENT_CATALOG) {
 }
 
 console.log()
-console.log('Admin can now switch to /dashboard to see AgentOS HQ\'s Command Center.')
+console.log('Admin can now switch to /dashboard to see Shadow HQ\'s Command Center.')
 process.exit(0)

@@ -84,7 +84,7 @@ export async function runDeveloperAgent(taskId) {
     }
 
     // Create feature branch
-    const branchName = `agentos/task-${String(task._id).slice(-8)}-${slugify(task.title).slice(0, 40)}`
+    const branchName = `shadow/task-${String(task._id).slice(-8)}-${slugify(task.title).slice(0, 40)}`
     try {
       await createBranch(token, owner, repoName, baseBranch, branchName)
     } catch (e) {
@@ -99,7 +99,7 @@ export async function runDeveloperAgent(taskId) {
       if (!c.path || typeof c.content !== 'string') continue
       const existingSha = fileShas.get(c.path)
       await upsertFile(token, owner, repoName, c.path, c.content,
-        c.commitMessage || `agentos: update ${c.path}`,
+        c.commitMessage || `shadow: update ${c.path}`,
         branchName, existingSha)
       applied.push(c.path)
     }
@@ -108,7 +108,7 @@ export async function runDeveloperAgent(taskId) {
     const prBody = renderPrBody(task, result, applied)
     const pr = await openDraftPR(token, owner, repoName, {
       head: branchName, base: baseBranch,
-      title: `agentos: ${task.title.slice(0, 100)}`,
+      title: `shadow: ${task.title.slice(0, 100)}`,
       body: prBody
     })
 
@@ -190,7 +190,7 @@ ${result.testingNotes ? `### Testing\n${result.testingNotes}\n` : ''}
 ${result.concerns?.length ? `### Reviewer should check\n${result.concerns.map(c => `- ${c}`).join('\n')}\n` : ''}
 
 ---
-*This PR was drafted by AgentOS Developer agent. Always review before merging.*
+*This PR was drafted by Shadow's Dev agent. Always review before merging.*
 Source task: \`${String(task._id)}\``
 }
 
