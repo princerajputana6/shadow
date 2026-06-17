@@ -1,0 +1,43 @@
+# $0 exposure: n8n + Cloudflare Tunnel (no public IP, no open ports, free HTTPS).
+# Use this on the GCP e2-micro. HTTPS is handled by Cloudflare, so NO Caddy.
+#
+# Prereq: create a Tunnel in Cloudflare Zero Trust dashboard, copy its token into
+# CF_TUNNEL_TOKEN in .env, and add a Public Hostname route:
+#     n8n.biztreck.world  ->  HTTP  ->  http://n8n:5678
+#
+#   docker compose -f docker-compose.tunnel.yml --env-file .env up -d
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    environment:
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - GENERIC_TIMEZONE=Asia/Kolkata
+      - TZ=Asia/Kolkata
+      - N8N_HOST=${N8N_HOST}            # e.g. n8n.biztreck.world
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=${WEBHOOK_URL}      # e.g. https://n8n.biztreck.world/
+      - N8N_PORT=5678
+      - N8N_PROXY_HOPS=1               # behind Cloudflare
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - MONGODB_URI=${MONGODB_URI}
+      - TOKEN_ENC_KEY=${TOKEN_ENC_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - TAVILY_API_KEY=${TAVILY_API_KEY}
+      - HUNTER_API_KEY=${HUNTER_API_KEY}
+      - APP_BASE_URL=${APP_BASE_URL}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    expose:
+      - "5678"            # internal only; cloudflared reaches it as http://n8n:5678
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CF_TUNNEL_TOKEN}
+    depends_on:
+      - n8n
+
+volumes:
+  n8n_data:

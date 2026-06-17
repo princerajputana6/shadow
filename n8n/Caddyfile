@@ -1,0 +1,7 @@
+# Auto-HTTPS reverse proxy for self-hosted n8n.
+# Replace the domain with your DuckDNS subdomain. Caddy fetches a free
+# Let's Encrypt certificate automatically on first request.
+
+n8n.yourname.duckdns.org {
+    reverse_proxy n8n:5678
+}
