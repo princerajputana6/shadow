@@ -1,0 +1,58 @@
+# LITE single-instance n8n for the Oracle Always Free VM. $0/month.
+#   - Regular execution mode (no separate worker)
+#   - SQLite (no Postgres, no Redis) — stored in the n8n_data volume
+#   - Caddy reverse proxy → automatic free HTTPS via Let's Encrypt
+#
+# Prereqs on the VM: Docker + Compose plugin, ports 80/443 open, a DuckDNS
+# subdomain pointing at the VM's public IP.
+#
+#   cd shadow/n8n
+#   cp .env.example .env        # fill secrets; set N8N_HOST / WEBHOOK_URL to your domain
+#   docker compose -f docker-compose.lite.yml --env-file .env up -d
+#
+# Then open https://<your-domain> and create your n8n owner login (no external account).
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    environment:
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - GENERIC_TIMEZONE=Asia/Kolkata
+      - TZ=Asia/Kolkata
+      # public host/url — e.g. n8n.yourname.duckdns.org
+      - N8N_HOST=${N8N_HOST}
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - N8N_PORT=5678
+      # SQLite is the default DB — nothing else to configure
+      # let Code/expression nodes read env (token decrypt + API calls)
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - MONGODB_URI=${MONGODB_URI}
+      - TOKEN_ENC_KEY=${TOKEN_ENC_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - TAVILY_API_KEY=${TAVILY_API_KEY}
+      - HUNTER_API_KEY=${HUNTER_API_KEY}
+      - APP_BASE_URL=${APP_BASE_URL}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    expose:
+      - "5678"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - n8n
+
+volumes:
+  n8n_data:
+  caddy_data:
+  caddy_config:

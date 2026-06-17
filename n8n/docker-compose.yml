@@ -1,0 +1,97 @@
+# Self-hosted n8n in QUEUE mode for the Shadow agentic platform.
+#   main    – UI, REST API, webhook ingress, schedule triggers (the "control plane")
+#   worker  – executes workflow runs pulled off the Redis queue (scale this horizontally)
+#   postgres – n8n's own metadata store (workflows, executions, credentials)
+#   redis   – Bull queue backing executions mode = queue
+#
+# Your application data (AgentRun, Prospect, Lead, ...) stays in your existing
+# MongoDB (MONGODB_URI) — n8n only uses Postgres for its own bookkeeping.
+#
+# Local:   docker compose --env-file .env up -d
+# Prod:    deploy the same compose on Railway/Render, or split each service.
+
+x-n8n-common: &n8n-common
+  image: n8nio/n8n:latest
+  environment:
+    # --- core ---
+    - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+    - GENERIC_TIMEZONE=Asia/Kolkata          # cron triggers fire in IST
+    - TZ=Asia/Kolkata
+    - N8N_HOST=${N8N_HOST:-localhost}
+    - N8N_PORT=5678
+    - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+    - WEBHOOK_URL=${WEBHOOK_URL:-http://localhost:5678/}
+    # --- metadata db ---
+    - DB_TYPE=postgresdb
+    - DB_POSTGRESDB_HOST=postgres
+    - DB_POSTGRESDB_PORT=5432
+    - DB_POSTGRESDB_DATABASE=${POSTGRES_DB:-n8n}
+    - DB_POSTGRESDB_USER=${POSTGRES_USER:-n8n}
+    - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+    # --- queue mode ---
+    - EXECUTIONS_MODE=queue
+    - QUEUE_BULL_REDIS_HOST=redis
+    - QUEUE_BULL_REDIS_PORT=6379
+    # --- let workflow Code/expression nodes read these (decrypt tokens, call APIs) ---
+    - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+    - MONGODB_URI=${MONGODB_URI}
+    - TOKEN_ENC_KEY=${TOKEN_ENC_KEY}
+    - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    - TAVILY_API_KEY=${TAVILY_API_KEY}
+    - HUNTER_API_KEY=${HUNTER_API_KEY}
+    - APP_BASE_URL=${APP_BASE_URL:-http://host.docker.internal:3000}
+    - RUNNER_SECRET=${RUNNER_SECRET}
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-n8n}
+      - POSTGRES_USER=${POSTGRES_USER:-n8n}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - n8n_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-n8n} -d ${POSTGRES_DB:-n8n}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - n8n_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  n8n:
+    <<: *n8n-common
+    command: start
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # so workflows can reach the Next app on the host
+
+  n8n-worker:
+    <<: *n8n-common
+    command: worker
+    volumes:
+      - n8n_data:/home/node/.n8n
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # scale with: docker compose up -d --scale n8n-worker=3
+
+volumes:
+  n8n_pg:
+  n8n_redis:
+  n8n_data:

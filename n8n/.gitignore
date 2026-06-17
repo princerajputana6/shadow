@@ -1,0 +1,3 @@
+# Keep real secrets out, but track the template.
+.env
+!.env.example
