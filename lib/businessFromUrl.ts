@@ -33,6 +33,56 @@ export type ExtractedProfile = {
   searchKeywords: string[]
   excludeKeywords: string[]
   regions: string[]
+  stub?: boolean  // true when AI was unavailable — profile needs manual completion
+}
+
+// Extract what we can from raw HTML without AI: title, meta description,
+// OG tags, h1/h2 headings, and visible body text.
+function extractFromHtml(html: string, url: string): Partial<ExtractedProfile> {
+  const hostname = (() => { try { return new URL(url).hostname.replace(/^www\./, '') } catch { return '' } })()
+
+  // Title
+  const titleMatch = html.match(/<title[^>]*>([^<]{1,200})<\/title>/i)
+  const title = titleMatch ? titleMatch[1].replace(/\s*[|\-–—].*$/, '').trim() : ''
+
+  // Meta description
+  const metaMatch = html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']{1,500})["']/i)
+    || html.match(/<meta[^>]+content=["']([^"']{1,500})["'][^>]+name=["']description["']/i)
+  const metaDesc = metaMatch ? metaMatch[1].trim() : ''
+
+  // OG title / description
+  const ogTitle = (html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']{1,200})["']/i) || [])[1] || ''
+  const ogDesc = (html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']{1,500})["']/i) || [])[1] || ''
+
+  // H1 headings
+  const h1s: string[] = []
+  const h1rx = /<h1[^>]*>([\s\S]*?)<\/h1>/gi
+  let m: RegExpExecArray | null
+  while ((m = h1rx.exec(html)) !== null && h1s.length < 3) {
+    const t = htmlToText(m[1]).trim().slice(0, 120)
+    if (t) h1s.push(t)
+  }
+
+  // H2 headings (often list services)
+  const h2s: string[] = []
+  const h2rx = /<h2[^>]*>([\s\S]*?)<\/h2>/gi
+  while ((m = h2rx.exec(html)) !== null && h2s.length < 8) {
+    const t = htmlToText(m[1]).trim().slice(0, 80)
+    if (t && t.split(' ').length <= 8) h2s.push(t)  // short h2s are often service names
+  }
+
+  const name = ogTitle || title || hostname.split('.')[0].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  const description = ogDesc || metaDesc || (h1s[0] ? `${h1s[0]}` : `Business at ${hostname}`)
+
+  return {
+    name: name.slice(0, 100),
+    description: description.slice(0, 500),
+    services: h2s.slice(0, 8),
+    idealCustomerProfile: '',
+    searchKeywords: [],
+    excludeKeywords: [],
+    regions: ['India']
+  }
 }
 
 export async function extractBusinessProfile(rawUrl: string): Promise<ExtractedProfile> {
@@ -55,7 +105,9 @@ export async function extractBusinessProfile(rawUrl: string): Promise<ExtractedP
     clearTimeout(timer)
   }
 
-  const text = htmlToText(html).slice(0, 12_000) // generous but bounded
+  // Always extract HTML-level info first — this is our guaranteed fallback.
+  const htmlProfile = extractFromHtml(html, url)
+  const text = htmlToText(html).slice(0, 12_000)
 
   const prompt = `You are profiling a B2B services company so an AI sales agent can find their ideal customers. Read this homepage text and extract a structured profile.
 
@@ -88,21 +140,29 @@ Return ONLY valid JSON. No markdown, no explanation:
   "regions": ["primary geographic markets, e.g. 'India', 'UAE', 'US'"]
 }`
 
-  const res = await claude.messages.create({
-    model: CLAUDE_MODEL,
-    max_tokens: 1200,
-    messages: [{ role: 'user', content: prompt }]
-  })
-  const block = res.content[0]
-  const raw = block?.type === 'text' ? block.text : ''
-  const json = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim()
-  const parsed = JSON.parse(json) as ExtractedProfile
+  try {
+    const res = await claude.messages.create({
+      model: CLAUDE_MODEL,
+      max_tokens: 1200,
+      messages: [{ role: 'user', content: prompt }]
+    })
+    const block = res.content[0]
+    const raw = block?.type === 'text' ? block.text : ''
+    const json = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim()
+    const parsed = JSON.parse(json) as ExtractedProfile
 
-  // Sanity defaults
-  if (!parsed.regions?.length) parsed.regions = ['India']
-  if (!parsed.searchKeywords) parsed.searchKeywords = []
-  if (!parsed.excludeKeywords) parsed.excludeKeywords = []
-  if (!parsed.services) parsed.services = []
+    // Sanity defaults — fill from HTML extraction if AI left fields blank
+    if (!parsed.name) parsed.name = htmlProfile.name!
+    if (!parsed.description) parsed.description = htmlProfile.description!
+    if (!parsed.regions?.length) parsed.regions = ['India']
+    if (!parsed.searchKeywords) parsed.searchKeywords = []
+    if (!parsed.excludeKeywords) parsed.excludeKeywords = []
+    if (!parsed.services?.length) parsed.services = htmlProfile.services || []
 
-  return parsed
+    return parsed
+  } catch {
+    // AI unavailable — return the HTML-extracted profile so the user at least
+    // gets the name, description, and headings (services) pre-filled.
+    return { ...htmlProfile as ExtractedProfile, stub: true }
+  }
 }
