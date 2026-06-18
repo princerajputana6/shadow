@@ -17,7 +17,38 @@ export async function addBusinessFromUrl(url: string) {
   const userId = await authedUserId()
   if (!url?.trim()) throw new Error('URL required')
   await connectDB()
-  const profile = await extractBusinessProfile(url)
+
+  let profile
+  try {
+    profile = await extractBusinessProfile(url)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    // If Gemini is unavailable/quota exceeded, fall back to a stub profile
+    // so the user can still add the business and fill details manually.
+    if (
+      msg.includes('GEMINI_API_KEY') ||
+      msg.includes('429') ||
+      msg.includes('rate limit') ||
+      msg.includes('network error') ||
+      msg.includes('API error')
+    ) {
+      // Build a minimal profile from the URL itself
+      const hostname = (() => { try { return new URL(url.startsWith('http') ? url : `https://${url}`).hostname.replace(/^www\./, '') } catch { return url } })()
+      const name = hostname.split('.')[0].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+      profile = {
+        name,
+        description: `Business at ${hostname}`,
+        services: [],
+        idealCustomerProfile: '',
+        searchKeywords: [],
+        excludeKeywords: [],
+        regions: ['India']
+      }
+    } else {
+      throw new Error(`Could not read that page: ${msg}`)
+    }
+  }
+
   if (!profile.name) throw new Error('Could not extract a business name from that page.')
   let slug = slugify(profile.name)
   let suffix = 0
@@ -39,7 +70,7 @@ export async function addBusinessFromUrl(url: string) {
   })
   revalidatePath('/businesses')
   revalidatePath('/dashboard')
-  return { id: String(created._id), name: created.name }
+  return { id: String(created._id), name: created.name, stub: !profile.services?.length }
 }
 
 export async function updateBusiness(id: string, patch: {

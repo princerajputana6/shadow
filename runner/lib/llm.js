@@ -52,7 +52,7 @@ async function create({ max_tokens, system, messages, temperature } = {}) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       })
-    } catch (e) { lastErr = e; await sleep(1500 * (attempt + 1)); continue }
+    } catch (e) { lastErr = new Error((e?.message || 'network error').replace(/key=[A-Za-z0-9_\-]{20,}/g, 'key=[REDACTED]')); await sleep(1500 * (attempt + 1)); continue }
 
     if (res.status === 429 || res.status >= 500) {
       const ra = Number(res.headers.get('retry-after'))

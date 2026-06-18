@@ -15,7 +15,11 @@ export function AddBusinessForm() {
     startTransition(async () => {
       try {
         const r = await addBusinessFromUrl(url)
-        setOk(`Added "${r.name}". Profile extracted by Claude — review and tweak below.`)
+        setOk(
+          r.stub
+            ? `Added "${r.name}". AI profiling was unavailable — please fill in the services and keywords manually.`
+            : `Added "${r.name}". Profile extracted — review and tweak below.`
+        )
         setUrl('')
       } catch (e) {
         setErr(e instanceof Error ? e.message : 'Failed')
