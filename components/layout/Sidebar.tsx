@@ -27,6 +27,12 @@ const MEMBER_SECTIONS: Section[] = [
     ]
   },
   {
+    title: 'Intelligence',
+    items: [
+      { href: '/memories', label: 'Memories', icon: 'brain' }
+    ]
+  },
+  {
     title: 'Growth',
     items: [
       { href: '/social', label: 'Content', icon: 'share' }

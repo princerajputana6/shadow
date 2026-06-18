@@ -70,6 +70,57 @@ app.post('/agents/developer/run', requireRunnerSecret, async (req, res) => {
   res.json({ status: 'started', taskId, agent: 'developer' })
 })
 
+app.post('/agents/leadgen/run', requireRunnerSecret, async (req, res) => {
+  const { userId, businessId } = req.body || {}
+  if (!userId) return res.status(400).json({ error: 'userId required' })
+  import('./agents/leadgenAgent.js')
+    .then(({ runLeadgenAgent }) => runLeadgenAgent(userId, { businessId }).catch((e) => console.error('[leadgen]', e)))
+    .catch((e) => console.error('[import]', e))
+  res.json({ status: 'started', userId, businessId: businessId || null, agent: 'leadgen' })
+})
+
+app.post('/agents/browser/run', requireRunnerSecret, async (req, res) => {
+  const { userId, url, task, extractSchema, businessId } = req.body || {}
+  if (!userId || !url || !task) return res.status(400).json({ error: 'userId, url, and task required' })
+  import('./agents/browserAgent.js')
+    .then(({ runBrowserAgent }) =>
+      runBrowserAgent(userId, { url, task, extractSchema, businessId }).catch((e) => console.error('[browser]', e))
+    )
+    .catch((e) => console.error('[import]', e))
+  res.json({ status: 'started', userId, url, agent: 'browser' })
+})
+
+app.post('/agents/browser/crawl', requireRunnerSecret, async (req, res) => {
+  const { userId, urls, task, maxPages } = req.body || {}
+  if (!userId || !urls?.length || !task) return res.status(400).json({ error: 'userId, urls[], and task required' })
+  import('./agents/browserAgent.js')
+    .then(({ runBrowserCrawl }) =>
+      runBrowserCrawl(userId, { urls, task, maxPages }).catch((e) => console.error('[browser_crawl]', e))
+    )
+    .catch((e) => console.error('[import]', e))
+  res.json({ status: 'started', userId, urlCount: urls.length, agent: 'browser_crawl' })
+})
+
+app.post('/agents/workflow/run', requireRunnerSecret, async (req, res) => {
+  const { runId } = req.body || {}
+  if (!runId) return res.status(400).json({ error: 'runId required' })
+  import('./agents/workflowAgent.js')
+    .then(({ runWorkflow }) => runWorkflow(runId).catch((e) => console.error('[workflow]', e)))
+    .catch((e) => console.error('[import]', e))
+  res.json({ status: 'started', runId, agent: 'workflow' })
+})
+
+// Agent message dispatch — poll and deliver pending messages to their target agents
+app.post('/agents/messages/dispatch', requireRunnerSecret, async (req, res) => {
+  const { agentName } = req.body || {}
+  res.json({ status: 'started', agentName })
+  import('./lib/agentMessageBus.js')
+    .then(({ dispatchPendingMessages }) =>
+      dispatchPendingMessages(agentName).catch((e) => console.error('[message_bus]', e))
+    )
+    .catch((e) => console.error('[import]', e))
+})
+
 async function listActiveUsers() {
   await connectDB()
   return User.find({ plan: { $in: ['owner', 'client_basic', 'client_pro'] } })
@@ -116,6 +167,70 @@ cron.schedule('15 */6 * * *', async () => {
       catch (e) { console.error(`[cron discovery] user=${u._id} failed:`, e) }
     }
   } catch (e) { console.error('[cron discovery] fatal:', e) }
+})
+
+// Every 6 hours (offset) — LinkedIn X-ray lead-gen run (03:45 / 09:45 / ... UTC)
+cron.schedule('45 */6 * * *', async () => {
+  console.log(`[cron] ${new Date().toISOString()} — leadgen run`)
+  if (!process.env.TAVILY_API_KEY) {
+    console.warn('[cron leadgen] TAVILY_API_KEY not set — skipping')
+    return
+  }
+  try {
+    const users = await listActiveUsers()
+    const { runLeadgenAgent } = await import('./agents/leadgenAgent.js')
+    for (const u of users) {
+      try { await runLeadgenAgent(u._id.toString()) }
+      catch (e) { console.error(`[cron leadgen] user=${u._id} failed:`, e) }
+    }
+  } catch (e) { console.error('[cron leadgen] fatal:', e) }
+})
+
+// Every 6 hours — process agent-to-agent message queue
+cron.schedule('20 */6 * * *', async () => {
+  console.log(`[cron] ${new Date().toISOString()} — agent message dispatch`)
+  try {
+    const { dispatchPendingMessages } = await import('./lib/agentMessageBus.js')
+    const result = await dispatchPendingMessages()
+    console.log(`[cron messages] dispatched=${result.dispatched}`)
+  } catch (e) { console.error('[cron messages] fatal:', e) }
+})
+
+// Daily at 01:30 UTC — memory maintenance (consolidation + summarization + expiry)
+cron.schedule('30 1 * * *', async () => {
+  console.log(`[cron] ${new Date().toISOString()} — memory maintenance`)
+  try {
+    const users = await listActiveUsers()
+    const { consolidateMemories, autoSummarize, applyShortTermExpiry } = await import('./lib/memoryOps.js')
+    for (const u of users) {
+      try {
+        const [c, s, e] = await Promise.all([
+          consolidateMemories(u._id.toString()),
+          autoSummarize(u._id.toString()),
+          applyShortTermExpiry(u._id.toString())
+        ])
+        if (c + s + e > 0) console.log(`[cron memory] user=${u._id} consolidated=${c} summarized=${s} expiredTagged=${e}`)
+      } catch (e2) { console.error(`[cron memory] user=${u._id} failed:`, e2) }
+    }
+  } catch (e) { console.error('[cron memory] fatal:', e) }
+})
+
+// Daily at 02:00 UTC — incremental embedding for memories + knowledge docs
+cron.schedule('0 2 * * *', async () => {
+  console.log(`[cron] ${new Date().toISOString()} — incremental embedding`)
+  try {
+    const users = await listActiveUsers()
+    for (const u of users) {
+      try {
+        const res = await fetch(`${process.env.NEXTJS_URL || 'http://localhost:3000'}/api/knowledge/embed`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-runner-secret': process.env.RUNNER_SECRET },
+          body: JSON.stringify({ batchSize: 20, target: 'both' })
+        })
+        if (!res.ok) console.warn(`[cron embed] user=${u._id} HTTP ${res.status}`)
+      } catch (e2) { console.error(`[cron embed] user=${u._id}:`, e2) }
+    }
+  } catch (e) { console.error('[cron embed] fatal:', e) }
 })
 
 const PORT = process.env.PORT || 3001

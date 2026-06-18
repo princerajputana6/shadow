@@ -53,6 +53,23 @@ export async function triggerDiscoveryRun() {
   revalidatePath('/discovery')
 }
 
+export async function triggerLeadgenRun() {
+  const userId = await authedUserId()
+  const runnerUrl = process.env.AGENT_RUNNER_URL
+  const runnerSecret = process.env.RUNNER_SECRET
+  if (!runnerUrl || !runnerSecret) throw new Error('Runner not configured')
+  const res = await fetch(`${runnerUrl}/agents/leadgen/run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-runner-secret': runnerSecret },
+    body: JSON.stringify({ userId })
+  })
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '')
+    throw new Error(`Runner ${res.status}: ${detail}`)
+  }
+  revalidatePath('/discovery')
+}
+
 export async function triggerEnrichment() {
   const userId = await authedUserId()
   const runnerUrl = process.env.AGENT_RUNNER_URL

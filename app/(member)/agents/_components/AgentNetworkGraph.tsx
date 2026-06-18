@@ -53,9 +53,13 @@ export function AgentNetworkGraph({ roster, ceoStats }: {
           <div className="relative flex items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-emerald-300">
-                  <span className="h-1 w-1 rounded-full bg-emerald-400 animate-pulse" /> working
-                </span>
+                {ceo.status === 'working' ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-emerald-300">
+                    <span className="h-1 w-1 rounded-full bg-emerald-400 animate-pulse" /> working
+                  </span>
+                ) : (
+                  <span className="text-[10px] uppercase tracking-wider text-muted/60 rounded-full ring-1 ring-border px-2 py-0.5">idle</span>
+                )}
               </div>
               <h3 className="mt-2 text-xl font-semibold">CEO/Orchestrator</h3>
               <p className="text-[10px] uppercase tracking-[0.18em] text-muted">{ceo.roleTitle}</p>

@@ -115,7 +115,7 @@ export const AGENT_ROSTER: AgentRole[] = [
     name: 'CEO',
     roleTitle: 'COMMAND LAYER',
     description: 'Routes work, reviews context, coordinates specialists, and returns the operator debrief.',
-    model: 'claude-haiku-4-5',
+    model: 'gemini-2.0-flash',
     backendAgentName: null,
     accent: 'violet',
     icon: '◆'
@@ -125,7 +125,7 @@ export const AGENT_ROSTER: AgentRole[] = [
     name: 'Researcher',
     roleTitle: 'INTEL GATHERER',
     description: 'Finds market signals, research briefs, sources, and strategic context.',
-    model: 'claude-haiku-4-5',
+    model: 'gemini-2.0-flash',
     backendAgentName: 'sales_finder',  // Lead Discovery agent
     accent: 'sky',
     icon: '◎'
@@ -135,7 +135,7 @@ export const AGENT_ROSTER: AgentRole[] = [
     name: 'CMO',
     roleTitle: 'MARKET VOICE',
     description: 'Turns strategy into content angles, campaigns, and publish-ready drafts.',
-    model: 'claude-haiku-4-5',
+    model: 'gemini-2.0-flash',
     backendAgentName: 'social_media',
     accent: 'orange',
     icon: '☼'
@@ -145,7 +145,7 @@ export const AGENT_ROSTER: AgentRole[] = [
     name: 'Sales Rep',
     roleTitle: 'REVENUE OPS',
     description: 'Qualifies leads, drafts outreach, and tracks follow-up opportunities.',
-    model: 'claude-haiku-4-5',
+    model: 'gemini-2.0-flash',
     backendAgentName: 'sales_finder',
     accent: 'amber',
     icon: '✦'
@@ -155,7 +155,7 @@ export const AGENT_ROSTER: AgentRole[] = [
     name: 'Dev',
     roleTitle: 'BUILD SYSTEM',
     description: 'Builds dashboards, integrations, scripts, and ships technical changes.',
-    model: 'claude-sonnet-4',
+    model: 'gemini-2.0-flash',
     backendAgentName: 'developer',
     accent: 'emerald',
     icon: '◈'
@@ -165,7 +165,7 @@ export const AGENT_ROSTER: AgentRole[] = [
     name: 'Data Analyst',
     roleTitle: 'SIGNAL LAYER',
     description: 'Analyses performance, trends, retention, and operational signal quality.',
-    model: 'claude-haiku-4-5',
+    model: 'gemini-2.0-flash',
     backendAgentName: 'cto',
     accent: 'fuchsia',
     icon: '◇'

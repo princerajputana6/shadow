@@ -2,9 +2,11 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { connectDB } from '@/lib/mongoose'
 import Prospect from '@/models/Prospect'
+import User from '@/models/User'
 import Link from 'next/link'
 import { DiscoveryRow } from './_components/DiscoveryRow'
 import { TriggerDiscoveryButton } from './_components/TriggerDiscoveryButton'
+import { TriggerLeadgenButton } from './_components/TriggerLeadgenButton'
 import { EnrichButton } from './_components/EnrichButton'
 
 export const dynamic = 'force-dynamic'
@@ -15,12 +17,18 @@ export default async function DiscoveryPage() {
   if (!session?.user?.id) redirect('/login')
 
   await connectDB()
-  const candidates = await Prospect.find({
-    userId: session.user.id,
-    source: 'discovered',
-    status: 'not_contacted',
-    'consent.granted': false
-  }).sort({ createdAt: -1 }).limit(100).lean()
+  const [candidates, user] = await Promise.all([
+    Prospect.find({
+      userId: session.user.id,
+      source: 'discovered',
+      status: 'not_contacted',
+      'consent.granted': false
+    }).sort({ createdAt: -1 }).limit(100).lean(),
+    User.findById(session.user.id).select('crmSheetId').lean()
+  ])
+  const crmUrl = user?.crmSheetId
+    ? `https://docs.google.com/spreadsheets/d/${user.crmSheetId}/edit`
+    : null
 
   return (
     <main className="mx-auto max-w-5xl p-6 space-y-5">
@@ -33,7 +41,13 @@ export default async function DiscoveryPage() {
         </div>
         <div className="flex items-center gap-3 text-xs text-muted">
           <Link href="/dashboard" className="hover:text-text">← Dashboard</Link>
+          {crmUrl && (
+            <a href={crmUrl} target="_blank" rel="noopener noreferrer" className="hover:text-text underline">
+              Open CRM sheet ↗
+            </a>
+          )}
           <EnrichButton />
+          <TriggerLeadgenButton />
           <TriggerDiscoveryButton />
         </div>
       </header>

@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk'
+import { llm as claude } from '../lib/llm.js'
 import { connectDB } from '../lib/mongoose.js'
 import User from '../models/User.js'
 import Business from '../models/Business.js'
@@ -7,7 +7,6 @@ import AgentRun from '../models/AgentRun.js'
 import { tavilySearch } from '../tools/tavilyTool.js'
 import { hunterDomainSearch, domainFromUrl, isPlaceholderEmail } from '../tools/hunterTool.js'
 
-const claude = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const MODEL = process.env.CLAUDE_MODEL || 'claude-haiku-4-5'
 const PER_RUN_QUERY_BUDGET = Number(process.env.DISCOVERY_QUERY_BUDGET || 8)
 

@@ -14,6 +14,7 @@ export interface ProspectDoc extends Document {
   name?: string
   email: string
   company?: string
+  title?: string
   linkedinUrl?: string
   phone?: string
   source: 'opted_in' | 'referral' | 'manual' | 'import' | 'discovered'
@@ -34,6 +35,7 @@ const ProspectSchema = new Schema<ProspectDoc>({
   name: String,
   email: { type: String, required: true, lowercase: true, trim: true },
   company: String,
+  title: String,
   linkedinUrl: String,
   phone: String,
   source: { type: String, required: true, enum: ['opted_in', 'referral', 'manual', 'import', 'discovered'] },

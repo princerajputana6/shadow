@@ -31,7 +31,7 @@ export default async function AgentsPage() {
         <h1 className="text-3xl font-semibold tracking-tight">One command brain coordinating five specialist agent roles.</h1>
       </header>
 
-      <AgentNetworkGraph roster={roster} ceoStats={{ routes, runs, model: 'claude-haiku-4-5' }} />
+      <AgentNetworkGraph roster={roster} ceoStats={{ routes, runs, model: 'gemini-2.0-flash' }} />
 
       <AgentLog runs={recentRuns as never} />
     </div>

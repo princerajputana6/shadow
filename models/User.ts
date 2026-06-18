@@ -52,6 +52,7 @@ export interface UserDoc extends Document {
     keywords?: string[]
     regions?: string[]
   }
+  crmSheetId?: string
   createdAt: Date
 }
 
@@ -101,6 +102,7 @@ const UserSchema = new Schema<UserDoc>(
       keywords: { type: [String], default: ['looking for developer', 'need a website', 'need an app', 'hiring developers'] },
       regions: { type: [String], default: ['India'] }
     },
+    crmSheetId: String,   // Google Sheets CRM (lead-gen), created on first run
     createdAt: { type: Date, default: Date.now }
   },
   { toObject: { getters: true }, toJSON: { getters: true } }

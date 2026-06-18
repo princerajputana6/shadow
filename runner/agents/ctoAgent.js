@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk'
+import { llm as claude } from '../lib/llm.js'
 import { connectDB } from '../lib/mongoose.js'
 import Task from '../models/Task.js'
 import Repo from '../models/Repo.js'
@@ -6,7 +6,6 @@ import User from '../models/User.js'
 import AgentRun from '../models/AgentRun.js'
 import { getRepoTree, shortFilesByExtension } from '../tools/githubTool.js'
 
-const claude = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const MODEL = process.env.CLAUDE_MODEL || 'claude-haiku-4-5'
 const PLANNING_MODEL = process.env.CLAUDE_PLANNING_MODEL || MODEL  // Sonnet recommended
 

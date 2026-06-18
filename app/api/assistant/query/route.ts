@@ -9,6 +9,8 @@ import AgentRun from '@/models/AgentRun'
 import Reply from '@/models/Reply'
 import Business from '@/models/Business'
 import { claude, CLAUDE_MODEL } from '@/lib/anthropic'
+import { retrieveMemories } from '@/lib/retrieval'
+import { extractMemoriesFromChat } from '@/lib/memoryOps'
 
 export const runtime = 'nodejs'
 
@@ -85,7 +87,9 @@ export async function POST(req: Request) {
     upcomingMeetings, meetingsToday,
     repliesToday,
     lastBriefing, lastSalesRun,
-    businesses
+    businesses,
+    // Hybrid retrieval — query-relevant memories ranked by importance + semantic similarity
+    retrievalResult
   ] = await Promise.all([
     Prospect.countDocuments({ userId }),
     Prospect.countDocuments({ userId, 'consent.granted': true }),
@@ -102,8 +106,13 @@ export async function POST(req: Request) {
     Reply.countDocuments({ userId, receivedAt: { $gte: startUTC } }),
     Briefing.findOne({ userId }).sort({ createdAt: -1 }).lean(),
     AgentRun.findOne({ userId, agentName: 'sales_finder' }).sort({ startedAt: -1 }).lean(),
-    Business.find({ userId, active: true }).select('name slug services').lean()
+    Business.find({ userId, active: true }).select('name slug services').lean(),
+    retrieveMemories(userId, query, { limit: 10, expand: true, rerank: true, compress: true }).catch(() => ({
+      memories: [], context: ''
+    }))
   ])
+
+  const { memories: rankedMemories, context: memoryContext } = retrievalResult
 
   const facts = {
     today: startOfTodayIST.toISOString().slice(0, 10),
@@ -127,15 +136,25 @@ export async function POST(req: Request) {
       startedAt: lastSalesRun.startedAt,
       stats: lastSalesRun.stats
     } : null,
-    businesses: businesses.map(b => ({ name: b.name, slug: b.slug, services: b.services }))
+    businesses: businesses.map(b => ({ name: b.name, slug: b.slug, services: b.services })),
+    memories: rankedMemories.map(m => ({ key: m.key, value: m.value, type: m.type, importance: m.importance })),
+    memoryContext
   }
 
-  const prompt = `You are Shadow, the user's AI operations assistant. The user spoke (or typed) a question. Answer conversationally in 1-3 short sentences, using the facts below. Speak in first person ("You have…", "I booked…"). Do not list bullet points — this is going to be spoken aloud. If asked for "today's update", give the punchiest version: contacted/replies/new leads/meetings. If a fact is missing or zero, be honest ("nothing yet today").
+  const memBlock = facts.memoryContext
+    ? `RELEVANT MEMORIES (compressed):\n${facts.memoryContext}`
+    : facts.memories.length
+    ? `MEMORIES:\n${facts.memories.map((m: { key: string; value: string }) => `${m.key}: ${m.value}`).join('\n')}`
+    : ''
+
+  const prompt = `You are Shadow, the user's AI operations assistant. The user spoke (or typed) a question. Answer conversationally in 1-3 short sentences, using the facts below — including the stored memories about the user/business, which you should treat as ground truth and draw on whenever relevant. Speak in first person ("You have…", "I booked…"). Do not list bullet points — this is going to be spoken aloud. If asked for "today's update", give the punchiest version: contacted/replies/new leads/meetings. If a fact is missing or zero, be honest ("nothing yet today").
 
 USER QUESTION: ${query}
 
-FACTS (JSON):
-${JSON.stringify(facts, null, 2)}
+${memBlock}
+
+OPERATIONAL FACTS (JSON):
+${JSON.stringify({ ...facts, memories: undefined, memoryContext: undefined }, null, 2)}
 
 Reply with just the spoken answer. No preamble.`
 
@@ -147,6 +166,10 @@ Reply with just the spoken answer. No preamble.`
     })
     const block = res.content[0]
     const answer = block?.type === 'text' ? block.text.trim() : 'I could not produce an answer.'
+
+    // Async: extract any durable facts from this turn and store as memories (fire-and-forget)
+    extractMemoriesFromChat(userId, query, answer).catch(() => {})
+
     return NextResponse.json({ answer, facts })
   } catch (e) {
     console.error('[assistant] claude failed:', e)

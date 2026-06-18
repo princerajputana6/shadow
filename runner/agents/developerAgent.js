@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk'
+import { llm as claude } from '../lib/llm.js'
 import { connectDB } from '../lib/mongoose.js'
 import Task from '../models/Task.js'
 import Repo from '../models/Repo.js'
@@ -9,7 +9,6 @@ import {
 } from '../tools/githubTool.js'
 import { parsePlanJson } from './ctoAgent.js'
 
-const claude = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const MODEL = process.env.CLAUDE_CODE_MODEL || process.env.CLAUDE_MODEL || 'claude-haiku-4-5'
 
 const MAX_FILE_BYTES = 60_000  // per-file read cap

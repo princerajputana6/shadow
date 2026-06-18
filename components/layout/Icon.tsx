@@ -15,7 +15,8 @@ const ICONS: Record<string, string> = {
   code: 'M16 18l6-6-6-6M8 6l-6 6 6 6',
   bot: 'M12 8V4H8M16 4h-4M20 8h-2M20 16h-2M4 8h2M4 16h2M16 20h-4M12 16v4M6 8v8a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4V8a4 4 0 0 0-4-4h-4a4 4 0 0 0-4 4z M9 13v.01M15 13v.01',
   logout: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
-  receipt: 'M14 2H6a2 2 0 0 0-2 2v16l4-2 4 2 4-2 4 2V8z M14 2v6h6M16 13H8M16 17H8M10 9H8'
+  receipt: 'M14 2H6a2 2 0 0 0-2 2v16l4-2 4 2 4-2 4 2V8z M14 2v6h6M16 13H8M16 17H8M10 9H8',
+  brain: 'M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24A2.5 2.5 0 0 1 9.5 2zM14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24A2.5 2.5 0 0 0 14.5 2z'
 }
 
 export function Icon({ name, className = 'h-4 w-4' }: { name: keyof typeof ICONS; className?: string }) {

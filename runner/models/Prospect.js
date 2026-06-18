@@ -6,6 +6,7 @@ const ProspectSchema = new mongoose.Schema({
   name: String,
   email: { type: String, required: true, lowercase: true, trim: true },
   company: String,
+  title: String,
   linkedinUrl: String,
   phone: String,
   source: { type: String, required: true, enum: ['opted_in', 'referral', 'manual', 'import', 'discovered'] },

@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk'
+import { llm as claude } from '../lib/llm.js'
 import { connectDB } from '../lib/mongoose.js'
 import User from '../models/User.js'
 import Prospect from '../models/Prospect.js'
@@ -9,12 +9,42 @@ import Briefing from '../models/Briefing.js'
 import AgentRun from '../models/AgentRun.js'
 import { sendOutreach, fetchReplies } from '../tools/gmailTool.js'
 import { findFreeSlot, createMeeting } from '../tools/calendarTool.js'
+import { readLeads, updateLeadStatus } from '../tools/sheetsTool.js'
 
-const claude = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const MODEL = process.env.CLAUDE_MODEL || 'claude-haiku-4-5'
 const DAILY_OUTREACH_CAP = Number(process.env.DAILY_OUTREACH_CAP || 30) // warm list, not blast
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+// Best-effort CRM sheet status write — never breaks the run.
+function crmStatus(user, email, status, extra) {
+  if (!user.crmSheetId || !email || email.endsWith('@placeholder.invalid')) return
+  updateLeadStatus(user.googleTokens, user.crmSheetId, email, status, extra)
+    .catch((e) => console.warn('[sales] crm status update failed:', e.message))
+}
+
+// Pull owner approvals from the Google Sheet CRM into Mongo. A row whose Status
+// is "Approved" flips its prospect to opted-in so it enters the outreach queue.
+async function syncApprovalsFromSheet(user) {
+  if (!user.crmSheetId) return 0
+  let approved = 0
+  try {
+    const rows = await readLeads(user.googleTokens, user.crmSheetId)
+    for (const row of rows) {
+      if (row.status.toLowerCase() !== 'approved') continue
+      const p = await Prospect.findOne({ userId: user._id, email: row.email })
+      if (p && !p.consent?.granted) {
+        p.consent = { granted: true, grantedAt: new Date(), source: 'sheet_approved' }
+        p.source = 'opted_in'
+        await p.save()
+        approved++
+      }
+    }
+  } catch (e) {
+    console.error('[sales] approval sync failed:', e.message)
+  }
+  return approved
+}
 
 export async function runSalesAgent(userId) {
   await connectDB()
@@ -23,7 +53,7 @@ export async function runSalesAgent(userId) {
     userId, agentName: 'sales_finder', status: 'running', startedAt: runStartedAt
   })
 
-  const stats = { contacted: 0, replies: 0, newLeads: 0, updatedLeads: 0, meetingsBooked: 0, skipped: 0 }
+  const stats = { approved: 0, contacted: 0, replies: 0, newLeads: 0, updatedLeads: 0, meetingsBooked: 0, skipped: 0 }
 
   try {
     const user = await User.findById(userId)
@@ -32,6 +62,9 @@ export async function runSalesAgent(userId) {
     if (!googleTokens?.refreshToken) {
       throw new Error('user has no Google refresh token — re-connect Google in /settings')
     }
+
+    // ── 0. Pull "Approved" rows from the CRM sheet into the opted-in queue
+    stats.approved = await syncApprovalsFromSheet(user)
 
     // ── 1. Outreach to OPTED-IN prospects only (Phase 1 adjustment #1)
     const optedIn = await Prospect.find({
@@ -43,19 +76,21 @@ export async function runSalesAgent(userId) {
 
     for (const p of optedIn) {
       try {
+        const { subject, body } = await composeOutreach(user, p)
         const { messageId, threadId } = await sendOutreach({
           googleTokens,
           fromEmail: user.email,
           fromName: user.name,
           to: p.email,
-          subject: composeSubject(user, p),
-          body: composeBody(user, p)
+          subject,
+          body
         })
         p.threadId = threadId
         p.status = 'contacted'
         p.contactedAt = new Date()
         await p.save()
         stats.contacted++
+        crmStatus(user, p.email, 'Contacted', { nextStep: 'Awaiting reply' })
         await sleep(2500) // gentle pacing; warm list, no need for 30s
       } catch (e) {
         console.error(`[sales] outreach failed prospect=${p._id}:`, e.message)
@@ -99,6 +134,7 @@ export async function runSalesAgent(userId) {
         prospect.status = 'replied'
         prospect.repliedAt = r.receivedAt
         await prospect.save()
+        crmStatus(user, prospect.email, 'Replied', { nextStep: 'Qualifying' })
 
         const analysis = await qualifyReply(r)
 
@@ -149,7 +185,10 @@ export async function runSalesAgent(userId) {
           })
           if (!hasMeeting && lead.status !== 'meeting_scheduled') {
             const booked = await tryBookMeeting({ user, lead, googleTokens })
-            if (booked) stats.meetingsBooked++
+            if (booked) {
+              stats.meetingsBooked++
+              crmStatus(user, lead.email, 'Booked', { nextStep: 'Meeting scheduled' })
+            }
           }
         }
 
@@ -206,6 +245,43 @@ Following up as promised. We help teams ship custom software — websites, mobil
 If now's a good time to explore, reply with a couple of words about what you're trying to solve and I'll send back a 15-minute slot that works for you.
 
 If now isn't right, just say "not now" and I'll close the loop.${signoff}`
+}
+
+// AI-personalized first-touch email. Uses the prospect's discovery signal to
+// tailor the opener. Falls back to the static template on any failure so a
+// send is never blocked by the model.
+async function composeOutreach(user, prospect) {
+  const fallback = { subject: composeSubject(user, prospect), body: composeBody(user, prospect) }
+  const firstName = prospect.name?.split(' ')[0] || 'there'
+  const signoff = user.name ? `\n\nBest,\n${user.name}` : ''
+
+  const prompt = `Write a SHORT cold outreach email (B2B). Plain text, no markdown, max 90 words. Friendly, specific, not salesy. One clear ask: a quick 15-minute call. Do NOT invent facts.
+
+SENDER sells: ${(user.searchProfile?.niche) || 'custom software development'}
+RECIPIENT:
+- Name: ${prospect.name || 'unknown'} (use first name "${firstName}")
+- Company: ${prospect.company || 'their company'}
+- Title: ${prospect.title || 'unknown'}
+- Signal we noticed: ${prospect.discoverySignal || 'none'}
+
+Return ONLY valid JSON (no markdown): {"subject": "...", "body": "..."}
+The body must NOT include a sign-off (it is appended separately).`
+
+  try {
+    const res = await claude.messages.create({
+      model: MODEL, max_tokens: 400,
+      messages: [{ role: 'user', content: prompt }]
+    })
+    const text = res.content[0]?.type === 'text' ? res.content[0].text : ''
+    const json = JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, '').trim())
+    if (json.subject && json.body) {
+      return { subject: String(json.subject).slice(0, 120), body: `${json.body}${signoff}` }
+    }
+    return fallback
+  } catch (e) {
+    console.warn('[sales] composeOutreach fell back to template:', e.message)
+    return fallback
+  }
 }
 
 function clampUrgency(n) {

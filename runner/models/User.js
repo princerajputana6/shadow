@@ -27,6 +27,7 @@ const UserSchema = new mongoose.Schema(
       login: String,
       connectedAt: Date
     },
+    crmSheetId: String,   // Google Sheets CRM (lead-gen), created on first run
     searchProfile: {
       niche: { type: String, default: 'custom software development for SMBs' },
       keywords: { type: [String], default: ['looking for developer', 'need a website', 'need an app', 'hiring developers'] },
